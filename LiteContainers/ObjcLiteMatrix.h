@@ -10,6 +10,9 @@
 
 @interface ObjcLiteMatrix : NSObject
 
+@property (readonly, nonatomic) NSInteger rowCapacity;
+@property (readonly, nonatomic) NSInteger colCapacity;
+
 - (instancetype)initWithRowSize:(NSNumber*)NSNRow withColumnSize:(NSNumber*)NSNCol;
 - (void)addObjectToMatrixAtIndex:(id)object row:(NSNumber*)NSNRow column:(NSNumber*)NSNCol;
 - (id)accessObjectAtRow:(NSNumber*)NSNrow column:(NSNumber*)NSNCol;

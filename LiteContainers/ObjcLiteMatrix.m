@@ -16,10 +16,10 @@
 void ***_array;
 }
 
-@property (nonatomic) NSUInteger rowCapacity;
-@property (nonatomic) NSUInteger colCapacity;
+@property (nonatomic) NSInteger rowCapacity;
+@property (nonatomic) NSInteger colCapacity;
 @property (nonatomic) NSMutableArray *arrayOfObjects;
-@property (nonatomic) NSString *warining;
+@property (nonatomic) NSString *warning;
 
 @end
 
@@ -42,13 +42,13 @@ void ***_array;
         _rowCapacity = row;
         _colCapacity = col;
         
-       _warining = [NSString stringWithFormat:@"Index out of range at Objective-C level! row max:%lu column max:%lu",(unsigned long)_rowCapacity, (unsigned long)_colCapacity];
+       _warning = [NSString stringWithFormat:@"Index out of range at Objective-C level! row max:%lu column max:%lu",(unsigned long)_rowCapacity, (unsigned long)_colCapacity];
     
         // dynamically allocate the C-style array used to to hold dumb pointers to objects
         _array = (void ***)malloc(row * sizeof(void **));
         
-        for (int j = 0; j < col; j++) {
-            _array[j] = (void *)malloc(col * sizeof(void *));
+        for (int i = 0; i < row; i++) {
+            _array[i] = (void *)malloc(col * sizeof(void *));
         }
         
         // Allocate NSMutableArray with explicit capicity
@@ -79,7 +79,7 @@ void ***_array;
     int row = NSNRow.intValue;
     int col = NSNCol.intValue;
     
-    NSAssert([self indexInValidForRow:row column:col], _warining);
+    NSAssert([self indexInValidForRow:row column:col], _warning);
     
     return (__bridge id)_array[row][col];
 }
@@ -91,9 +91,9 @@ void ***_array;
     int row = NSNRow.intValue;
     int col = NSNCol.intValue;
     
-    NSAssert([self indexInValidForRow:row column:col], _warining);
+    NSAssert([self indexInValidForRow:row column:col], _warning);
     
-    [self.arrayOfObjects insertObject:object atIndex:row * col];
+    [self.arrayOfObjects addObject:object];
     _array[row][col] = (__bridge void *)object;
 }
 
@@ -104,7 +104,7 @@ void ***_array;
     int row = NSNRow.intValue;
     int col = NSNCol.intValue;
     
-    NSAssert([self indexInValidForRow:row column:col], _warining);
+    NSAssert([self indexInValidForRow:row column:col], _warning);
     
     free(_array[row][col]);
     _array[row][col] = NULL;
