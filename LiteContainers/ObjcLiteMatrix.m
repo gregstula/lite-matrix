@@ -33,8 +33,8 @@ void ***_array;
     
     self = [super init];
     
-    int row = NSNRow.intValue;
-    int col = NSNCol.intValue;
+    NSInteger row = NSNRow.integerValue;
+    NSInteger col = NSNCol.integerValue;
     
     if (self) {
         
@@ -76,8 +76,8 @@ void ***_array;
 
 - (id)accessObjectAtRow:(NSNumber *)NSNRow column:(NSNumber *)NSNCol
 {
-    int row = NSNRow.intValue;
-    int col = NSNCol.intValue;
+    NSInteger row = NSNRow.integerValue;
+    NSInteger col = NSNCol.integerValue;
     
     NSAssert([self indexInValidForRow:row column:col], _warning);
     
@@ -88,8 +88,8 @@ void ***_array;
 
 - (void)addObjectToMatrixAtIndex:(id)object row:(NSNumber*)NSNRow column:(NSNumber*)NSNCol
 {
-    int row = NSNRow.intValue;
-    int col = NSNCol.intValue;
+    NSInteger row = NSNRow.integerValue;
+    NSInteger col = NSNCol.integerValue;
     
     NSAssert([self indexInValidForRow:row column:col], _warning);
     
@@ -101,8 +101,8 @@ void ***_array;
 
 - (void)replaceObjectInMatrixAtIndex:(id)object row:(NSNumber*)NSNRow column:(NSNumber*)NSNCol
 {
-    int row = NSNRow.intValue;
-    int col = NSNCol.intValue;
+    NSInteger row = NSNRow.integerValue;
+    NSInteger col = NSNCol.integerValue;
     
     NSAssert([self indexInValidForRow:row column:col], _warning);
     
