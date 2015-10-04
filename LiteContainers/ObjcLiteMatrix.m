@@ -8,12 +8,11 @@
 // http://opensource.org/licenses/BSD-3-Clause
 
 #import "ObjcLiteMatrix.h"
+#import "lite_matrix_lookup.h"
 
 # pragma mark - private interface
-
 @interface ObjcLiteMatrix() {
-    // The 2D array
-    void*** _array;
+    lite_matrix_lookup_table *internal_matrix;
 }
 
 @property (nonatomic) NSInteger rowCapacity;
@@ -49,15 +48,10 @@
         
         
         // dynamically allocate the C-style array used to to hold dumb pointers to objects
-        _array = malloc(_rowCapacity * sizeof(void**));
+        internal_matrix = LCLM_alloc_lookup_table(rowSize, colSize);
         
-        for (int i = 0; i < _rowCapacity; i++) {
-            _array[i] = malloc(_colCapacity * sizeof(void*));
-        }
-        
-        // Allocate NSMutableArray with explicit capicity
-        _arrayOfObjects = [[NSMutableArray alloc] initWithCapacity: _rowCapacity * _colCapacity];
     }
+    
     return _rowCapacity <= 0 || _colCapacity <= 0 ? nil : self;
 }
 
@@ -81,7 +75,6 @@
 // Checks that the parameters passed are in the bounds set by then initializer
 - (bool)indexInValidForRow:(NSInteger)row column:(NSInteger)col
 {
-    
     return (row >= 0 && row < _rowCapacity) && (col >= 0 && col < _colCapacity);
 }
 
@@ -95,7 +88,7 @@
     
     NSAssert([self indexInValidForRow:row column:col], self.warning);
     
-    return (__bridge id)_array[row][col];
+    return (__bridge id)LCLM_access_object_at_index(internal_matrix, row, col);
 }
 
 
@@ -109,7 +102,7 @@
     NSAssert([self indexInValidForRow:row column:col], self.warning);
     
     [self.arrayOfObjects insertObject:object atIndex:row * col];
-    _array[row][col] = (__bridge void *)object;
+    LCLM_insert_object_at_index(internal_matrix, row, col, (__bridge void*)object);
 }
 
 
@@ -117,10 +110,7 @@
 // Free what you malloc
 - (void)dealloc
 {
-    for (int j = 0; j < _colCapacity; j++) {
-        free(_array[j]);
-    }
-    free(_array);
+    LCLM_dealloc_lookup_table(internal_matrix);
 }
 
 @end

@@ -9,95 +9,92 @@
 
 import Foundation
 
-class LiteMatrix<T: NSObject> {
+class LiteMatrix<T : AnyObject> {
 
-    private let matrix:ObjcLiteMatrix
+    // Used for ARC
+    private var ownerOfObjects:Array<T?>
     let rowCapacity:Int
     let colCapacity:Int
     
-    private var initializeTOnMatrixInit:Bool = true
-    private var warning: String
-    private var index = (x:0, y:0)
+    /* Opaque pointers are used to represent C pointers to types that cannot be represented in
+     Swift, such as incomplete struct typees. It is used here to represent the
+     lite_matrix_lookup_table struct that contains the void*** matrix. */
     
+    let lookupPtr:COpaquePointer;
     
-    // Designated initializer, initializes a matrix of unique objects
-    init(rows:Int, columns cols:Int)
+    // init & deinit
+    init(rows:Int, columns cols:Int, repeatedValue:T)
     {
         rowCapacity = rows
         colCapacity = cols
         
-        matrix = ObjcLiteMatrix(rowSize:rows, withColumnSize:cols)
-        warning = "Index out of range - row capacity: \(rowCapacity), col capacity: \(colCapacity)"
-       
-        for var i = 0; i < rowCapacity; i++ {
-            for var j = 0; j < colCapacity; j++ {
-                matrix.addObjectToMatrixAtIndex(T() as AnyObject, row:i , column:j)
+        lookupPtr = LCLM_alloc_lookup_table(rows, cols)
+        
+        ownerOfObjects = [T?](count:rows * cols, repeatedValue:repeatedValue)
+        
+        let unman = Unmanaged.passRetained(repeatedValue)
+        let voidPtr = unsafeBitCast(unman, UnsafeMutablePointer<Void>.self)
+        
+        for i in 0..<rowCapacity {
+            for j in 0..<colCapacity {
+                LCLM_insert_object_at_index(lookupPtr, i, j, voidPtr)
             }
         }
     }
-
-
-    // Initializes a Matrix of references to the same object
-    init(row:Int, column col:Int, withRepeatedValue value: T)
+    
+    
+    deinit
     {
-        rowCapacity = row
-        colCapacity = col
+        LCLM_dealloc_lookup_table(lookupPtr)
+    }
+    
+
+    private func accessObjectFromMatrix(row row:Int, column col:Int) -> T?
+    {
+        assert(indexIsValid(row: row, column: col), "Index out of bounds!")
+        // Convert from void* to Swift object
         
-        matrix = ObjcLiteMatrix(rowSize:row, withColumnSize:col)
-        warning = "Index out of range - row capacity: \(rowCapacity), col capacity: \(colCapacity)"
+        let ptr = LCLM_access_object_at_index(lookupPtr, row, col)
         
-        for var i = 0; i < rowCapacity; i++ {
-            for var j = 0; j < colCapacity; j++ {
-                matrix.addObjectToMatrixAtIndex(value as AnyObject, row:i , column:j)
-            }
-        }
+        let object = UnsafeMutablePointer<Unmanaged<T>>(ptr)
+        
+        let unman = object.memory
+        
+        return unman.takeRetainedValue()
+        
     }
     
     
+    private func insertObjectInMatrix(object object:T, row:Int, column col:Int)
+    {
+        // ARC automagically handles the memory management for each object
+        // via the Array<T>.
+        
+        assert(indexIsValid(row: row, column: col), "Index out of bounds!")
+        ownerOfObjects[row * col] = object
+        
+        // Cast the pointer to void*, it is no longer a safe pointer and it does not count
+        // towards the object's reference count.
+        let voidObjectPointer = unsafeBitCast(object, UnsafeMutablePointer<Void>.self)
+        
+        // C function call
+        LCLM_insert_object_at_index(lookupPtr, row, col, voidObjectPointer)
+    }
+    
+    
+    // MARK: Subscript
     // Double subscript notation is the only public interface: exampleMatrix[1,2]
     subscript(row:Int, col:Int) -> T
     {
         get {
-            //index = (x:row, y:col)
-            //updateWarning()
-            assert(indexIsValidForRow(row, column: col), warning)
-            return getObjectFromMatrixAtRow(row, column: col)
+            return accessObjectFromMatrix(row: row, column: col)!
         }
-        
         set {
-            //index = (row, col)
-            //updateWarning()
-            assert(indexIsValidForRow(row, column: col),warning)
-            setObjectInMatrixAtIndex(newValue, row: row, column: col)
+            insertObjectInMatrix(object: newValue, row: row, column: col)
         }
-    }
-
-
-    private func getObjectFromMatrixAtRow(row:Int, column col:Int) -> T
-    {
-        let nilWarning = "Nil returned from matrix at index \(row), \(col)"
-        
-        let obj = matrix.accessObjectAtRow(row, column: col) as? T
-        assert(obj != nil, nilWarning)
-        return obj!
-    }
-
-
-    private func setObjectInMatrixAtIndex(object:T, row:Int, column col:Int)
-    {
-        matrix.addObjectToMatrixAtIndex(object as AnyObject, row: row, column: col)
-    }
-
-
-    /* Debugging */
-    private func updateWarning()
-    {
-        warning = "Index out of range - \(index) - row capacity: \(rowCapacity), col capacity: \(colCapacity)"
     }
     
-
-    /* Debugging */
-    private func indexIsValidForRow(row:Int, column col:Int) -> Bool
+    private func indexIsValid(row row:Int, column col:Int) -> Bool
     {
         return (row >= 0 && row < rowCapacity) && (col >= 0 && col < colCapacity)
     }
@@ -118,26 +115,24 @@ extension LiteMatrix : CollectionType {
     }
     
     
-    // Generator for implementing for..in iteration
+    // Original generate method, now returns the coords it used
     func generate() -> AnyGenerator<T> {
-    
-        let rowMax = rowCapacity
-        let colMax = colCapacity
         
         var rowIndex = 0
         var colIndex = 0
-        
-        // Passes function definition for next() on init with a closure
+    
         return anyGenerator {
-            if rowIndex < rowMax {
-                if colIndex < colMax {
-                    return self.getObjectFromMatrixAtRow(rowIndex, column: colIndex++)
-                } else {
-                    colIndex = 0
-                    return self.getObjectFromMatrixAtRow(rowIndex++, column: colIndex)
-                }
-            } else {
+        
+            guard rowIndex < self.rowCapacity else {
                 return nil
+            }
+            
+            if colIndex++ == self.colCapacity {
+                colIndex = 0
+                rowIndex++
+                return self.accessObjectFromMatrix(row: rowIndex, column: colIndex)
+            } else {
+                return self.accessObjectFromMatrix(row: rowIndex, column: colIndex)
             }
         }
     }
@@ -146,9 +141,8 @@ extension LiteMatrix : CollectionType {
     // A single subscript, i, will return what is in the column at index i, in the first row
     // This is only implemented to conform to the CollectionType protocol and the objects
     // in the matrix ought not be accessed this way. This is prone to index out of bounds.
-    internal subscript(i:Int) -> T {
-        assert(indexIsValidForRow(0, column: i), warning)
-        return getObjectFromMatrixAtRow(0, column: i)
+    internal subscript(i: Int) -> T {
+        return accessObjectFromMatrix(row: 0,column: 0)!
     }
-    
-} // End of extension CollectionType
+}
+// End of extension CollectionType
