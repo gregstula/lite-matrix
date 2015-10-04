@@ -13,7 +13,7 @@
 
 @interface ObjcLiteMatrix() {
     // The 2D array
-    void ***_array;
+    void*** _array;
 }
 
 @property (nonatomic) NSInteger rowCapacity;
@@ -49,10 +49,10 @@
         
         
         // dynamically allocate the C-style array used to to hold dumb pointers to objects
-        _array = (void ***)malloc(_rowCapacity * sizeof(void **));
+        _array = malloc(_rowCapacity * sizeof(void**));
         
         for (int i = 0; i < _rowCapacity; i++) {
-            _array[i] = (void *)malloc(_colCapacity * sizeof(void *));
+            _array[i] = malloc(_colCapacity * sizeof(void*));
         }
         
         // Allocate NSMutableArray with explicit capicity
@@ -110,24 +110,6 @@
     
     [self.arrayOfObjects insertObject:object atIndex:row * col];
     _array[row][col] = (__bridge void *)object;
-}
-
-
-- (void)replaceObjectInMatrixAtIndex:(id)object row:(NSInteger)row column:(NSInteger)col
-{
-    // Debug
-    self.arg1Value = row;
-    self.arg2Value = col;
- 
-    NSAssert([self indexInValidForRow:row column:col], self.warning);
-    
-    free(_array[row][col]);
-    _array[row][col] = NULL;
-    
-    [self.arrayOfObjects replaceObjectAtIndex:row * col withObject:object];
-    
-    _array[row][col] = (__bridge void*)object;
-    
 }
 
 
