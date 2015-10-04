@@ -12,99 +12,114 @@
 # pragma mark - private interface
 
 @interface ObjcLiteMatrix() {
-// The 2D array
-void ***_array;
+    // The 2D array
+    void ***_array;
 }
 
 @property (nonatomic) NSInteger rowCapacity;
 @property (nonatomic) NSInteger colCapacity;
-@property (nonatomic) NSMutableArray *arrayOfObjects;
 @property (nonatomic) NSString *warning;
+@property (nonatomic) NSMutableArray *arrayOfObjects;
+
+// Debugging
+@property (nonatomic) NSInteger arg1Value;
+@property (nonatomic) NSInteger arg2Value;
 
 @end
 
-#pragma mark - Initializers
 
+#pragma mark - Initializers
 @implementation ObjcLiteMatrix
 
+# define ERR_F -1
 // Designated initializer
-- (instancetype)initWithRowSize:(NSNumber *)NSNRow withColumnSize:(NSNumber *)NSNCol
+- (instancetype)initWithRowSize:(NSInteger)rowSize withColumnSize:(NSInteger)colSize
 {
     
     self = [super init];
     
-    NSInteger row = NSNRow.integerValue;
-    NSInteger col = NSNCol.integerValue;
-    
     if (self) {
         
         // set capacity
-        _rowCapacity = row;
-        _colCapacity = col;
+        _rowCapacity = rowSize;
+        _colCapacity = colSize;
         
-       _warning = [NSString stringWithFormat:@"Index out of range at Objective-C level! row max:%lu column max:%lu",(unsigned long)_rowCapacity, (unsigned long)_colCapacity];
-    
+        _arg1Value = ERR_F;
+        _arg2Value = ERR_F;
+        
+        
         // dynamically allocate the C-style array used to to hold dumb pointers to objects
-        _array = (void ***)malloc(row * sizeof(void **));
+        _array = (void ***)malloc(_rowCapacity * sizeof(void **));
         
-        for (int i = 0; i < row; i++) {
-            _array[i] = (void *)malloc(col * sizeof(void *));
+        for (int i = 0; i < _rowCapacity; i++) {
+            _array[i] = (void *)malloc(_colCapacity * sizeof(void *));
         }
         
         // Allocate NSMutableArray with explicit capicity
-        _arrayOfObjects = [[NSMutableArray alloc] initWithCapacity: row * col];
+        _arrayOfObjects = [[NSMutableArray alloc] initWithCapacity: _rowCapacity * _colCapacity];
     }
-        return row <= 0 || col <= 0 ? nil : self;
+    return _rowCapacity <= 0 || _colCapacity <= 0 ? nil : self;
 }
 
 
 // Init
 - (instancetype)init
 {
-   return nil;
+    return nil;
 }
+
+
+- (NSString *)warning
+{
+    _warning = [NSString stringWithFormat:@"Index out of range at Objective-C level! row max:%lu column max:%lu arg1:%lu arg2:%lu",(unsigned long)_rowCapacity, (unsigned long)_colCapacity, _arg1Value != ERR_F ? _arg1Value : 0, _arg2Value != ERR_F ? _arg2Value : 0];
+    
+    return _warning;
+}
+
 
 #pragma mark - Precondition for bounds checking
-
 // Checks that the parameters passed are in the bounds set by then initializer
-- (bool)indexInValidForRow:(int)row column:(int)col {
+- (bool)indexInValidForRow:(NSInteger)row column:(NSInteger)col
+{
     
-    return (row >= 0 && row < _rowCapacity) && col >= 0 && col < _colCapacity;
+    return (row >= 0 && row < _rowCapacity) && (col >= 0 && col < _colCapacity);
 }
 
-#pragma mark - Accessor
 
-- (id)accessObjectAtRow:(NSNumber *)NSNRow column:(NSNumber *)NSNCol
+#pragma mark - Accessor
+- (id)accessObjectAtRow:(NSInteger)row column:(NSInteger)col
 {
-    NSInteger row = NSNRow.integerValue;
-    NSInteger col = NSNCol.integerValue;
+    // Debug
+    self.arg1Value = row;
+    self.arg2Value = col;
     
-    NSAssert([self indexInValidForRow:row column:col], _warning);
+    NSAssert([self indexInValidForRow:row column:col], self.warning);
     
     return (__bridge id)_array[row][col];
 }
 
-#pragma mark - Mutators
 
-- (void)addObjectToMatrixAtIndex:(id)object row:(NSNumber*)NSNRow column:(NSNumber*)NSNCol
+#pragma mark - Mutators
+- (void)addObjectToMatrixAtIndex:(id)object row:(NSInteger)row column:(NSInteger)col
 {
-    NSInteger row = NSNRow.integerValue;
-    NSInteger col = NSNCol.integerValue;
+    // Debug
+    self.arg1Value = row;
+    self.arg2Value = col;
     
-    NSAssert([self indexInValidForRow:row column:col], _warning);
+    NSAssert([self indexInValidForRow:row column:col], self.warning);
     
-    [self.arrayOfObjects addObject:object];
+    [self.arrayOfObjects insertObject:object atIndex:row * col];
     _array[row][col] = (__bridge void *)object;
 }
 
 
-
-- (void)replaceObjectInMatrixAtIndex:(id)object row:(NSNumber*)NSNRow column:(NSNumber*)NSNCol
+- (void)replaceObjectInMatrixAtIndex:(id)object row:(NSInteger)row column:(NSInteger)col
 {
-    NSInteger row = NSNRow.integerValue;
-    NSInteger col = NSNCol.integerValue;
-    
-    NSAssert([self indexInValidForRow:row column:col], _warning);
+    // Debug
+    self.arg1Value = row;
+    self.arg2Value = col;
+ 
+    NSAssert([self indexInValidForRow:row column:col], self.warning);
     
     free(_array[row][col]);
     _array[row][col] = NULL;
@@ -115,8 +130,8 @@ void ***_array;
     
 }
 
-#pragma mark - dealloc
 
+#pragma mark - dealloc
 // Free what you malloc
 - (void)dealloc
 {
@@ -127,3 +142,4 @@ void ***_array;
 }
 
 @end
+

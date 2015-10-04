@@ -26,30 +26,27 @@ class LiteMatrix<T: NSObject> {
         colCapacity = cols
         matrix = ObjcLiteMatrix(rowSize:rows, withColumnSize:cols)
         warning = "Index out of range - row capacity: \(rowCapacity), col capacity: \(colCapacity)"
-        
-        for var i = 0; i < rowCapacity; i++ {
-            for var j = 0; j < colCapacity; j++ {
-                matrix.addObjectToMatrixAtIndex(T() as AnyObject, row:i , column:j)
-            }
-        }
     }
 
 
     // Initializes a Matrix of references to the same object
-    init(row: Int, column col: Int, withRepeatedValue value: T) {
-        rowCapacity = row
-        colCapacity = col
-        matrix = ObjcLiteMatrix(rowSize:row, withColumnSize:col)
+    init(rows: Int, columns cols: Int, withRepeatedValue value: T) {
+        rowCapacity = rows
+        colCapacity = cols
+        
+        matrix = ObjcLiteMatrix(rowSize:rows, withColumnSize:cols)
         warning = "Index out of range - row capacity: \(rowCapacity), col capacity: \(colCapacity)"
         
         for var i = 0; i < rowCapacity; i++ {
             for var j = 0; j < colCapacity; j++ {
+            assert(matrix.indexInValidForRow(i, column: j), "Swift LiteMatrix Initialization error");
                 matrix.addObjectToMatrixAtIndex(value as AnyObject, row:i , column:j)
             }
         }
     }
     
     
+    // MARK: Subscript
     // Double subscript notation is the only public interface: exampleMatrix[1,2]
     subscript(row: Int, col: Int) -> T {
         
@@ -62,39 +59,42 @@ class LiteMatrix<T: NSObject> {
         set {
             //index = (row, col)
             //updateWarning()
-            assert(indexIsValidForRow(row, column: col),warning)
+            assert(indexIsValidForRow(row, column: col), warning)
             setObjectInMatrixAtIndex(newValue, row: row, column: col)
         }
     }
 
 
     private func getObjectFromMatrixAtRow(row: Int, column col: Int) -> T {
-        var nilWarning = "Nil returned from matrix at index \(row), \(col)"
+        let nilWarning = "Nil returned from matrix at index \(row), \(col)"
         
-        var obj = matrix.accessObjectAtRow(row, column: col) as? T
+        assert(indexIsValidForRow(row, column: col),warning)
+        
+        let obj = matrix.accessObjectAtRow(row, column: col) as? T
         assert(obj != nil, nilWarning)
         return obj!
     }
 
 
     private func setObjectInMatrixAtIndex(object: T, row: Int, column col: Int) {
-        matrix.addObjectToMatrixAtIndex(object as AnyObject, row: row, column: col)
+        assert(indexIsValidForRow(row, column: col),warning)
+        matrix.replaceObjectInMatrixAtIndex(object as AnyObject, row: row, column: col)
     }
 
 
-    /* Debugging */
+    // MARK: Debugging
     private func updateWarning() {
         warning = "Index out of range - \(index) - row capacity: \(rowCapacity), col capacity: \(colCapacity)"
     }
     
-
-    /* Debugging */
+    
      private func indexIsValidForRow(row: Int, column col: Int) -> Bool {
         return (row >= 0 && row < rowCapacity) && (col >= 0 && col < colCapacity)
     }
 }
 
 
+// MARK: Implementation of CollectionType Protocol
 extension LiteMatrix : CollectionType {
     typealias Index = Int
     
@@ -108,26 +108,24 @@ extension LiteMatrix : CollectionType {
     }
     
     
-    // Generator for implementing for..in iteration
-    func generate() -> GeneratorOf<T> {
-    
-        let rowMax = rowCapacity
-        let colMax = colCapacity
+    // Original generate method, now returns the coords it used
+    func generate() -> AnyGenerator<T> {
         
         var rowIndex = 0
         var colIndex = 0
+    
+        return anyGenerator {
         
-        // Passes function definition for next() on init with a closure
-        return GeneratorOf<T> {
-            if rowIndex < rowMax {
-                if colIndex < colMax {
-                    return self.getObjectFromMatrixAtRow(rowIndex, column: colIndex++)
-                } else {
-                    colIndex = 0
-                    return self.getObjectFromMatrixAtRow(rowIndex++, column: colIndex)
-                }
-            } else {
+            guard rowIndex < self.rowCapacity else {
                 return nil
+            }
+            
+            if colIndex++ == self.colCapacity {
+                colIndex = 0
+                rowIndex++
+                return self.getObjectFromMatrixAtRow(rowIndex, column: colIndex)
+            } else {
+                return self.getObjectFromMatrixAtRow(rowIndex, column: colIndex)
             }
         }
     }
