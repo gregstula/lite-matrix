@@ -21,8 +21,7 @@ class LiteMatrix<T: NSObject> {
     
     
     // Designated initializer, initializes a matrix of unique objects
-    init(rows:Int, columns cols:Int)
-    {
+    init(rows:Int, columns cols:Int) {
         rowCapacity = rows
         colCapacity = cols
         
@@ -38,8 +37,7 @@ class LiteMatrix<T: NSObject> {
 
 
     // Initializes a Matrix of references to the same object
-    init(row:Int, column col:Int, withRepeatedValue value: T)
-    {
+    init(row:Int, column col:Int, withRepeatedValue value: T) {
         rowCapacity = row
         colCapacity = col
         
@@ -55,8 +53,7 @@ class LiteMatrix<T: NSObject> {
     
     
     // Double subscript notation is the only public interface: exampleMatrix[1,2]
-    subscript(row:Int, col:Int) -> T
-    {
+    subscript(row:Int, col:Int) -> T {
         get {
             //index = (x:row, y:col)
             //updateWarning()
@@ -73,8 +70,7 @@ class LiteMatrix<T: NSObject> {
     }
 
 
-    private func getObjectFromMatrixAtRow(row:Int, column col:Int) -> T
-    {
+    private func getObjectFromMatrixAtRow(row:Int, column col:Int) -> T {
         let nilWarning = "Nil returned from matrix at index \(row), \(col)"
         
         let obj = matrix.accessObjectAtRow(row, column: col) as? T
@@ -83,22 +79,19 @@ class LiteMatrix<T: NSObject> {
     }
 
 
-    private func setObjectInMatrixAtIndex(object:T, row:Int, column col:Int)
-    {
+    private func setObjectInMatrixAtIndex(object:T, row:Int, column col:Int) {
         matrix.addObjectToMatrixAtIndex(object as AnyObject, row: row, column: col)
     }
 
 
     /* Debugging */
-    private func updateWarning()
-    {
+    private func updateWarning() {
         warning = "Index out of range - \(index) - row capacity: \(rowCapacity), col capacity: \(colCapacity)"
     }
     
 
     /* Debugging */
-    private func indexIsValidForRow(row:Int, column col:Int) -> Bool
-    {
+    private func indexIsValidForRow(row:Int, column col:Int) -> Bool {
         return (row >= 0 && row < rowCapacity) && (col >= 0 && col < colCapacity)
     }
 }
