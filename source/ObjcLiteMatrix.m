@@ -72,8 +72,8 @@
       stringWithFormat:@"Index out of range at Objective-C level! row max:%lu "
                        @"column max:%lu arg1:%lu arg2:%lu",
                        (unsigned long)_rowCapacity, (unsigned long)_colCapacity,
-                       _arg1Value != ERR_F ? _arg1Value : 0,
-                       _arg2Value != ERR_F ? _arg2Value : 0];
+                       (long)(_arg1Value != ERR_F ? _arg1Value : 0),
+                       (long)(_arg2Value != ERR_F ? _arg2Value : 0)];
 
   return _warning;
 }
