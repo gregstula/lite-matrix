@@ -6,7 +6,7 @@
 //  Copyright © 2016 Gregory D. Stula. All rights reserved.
 //
 
-#import <Cocoa/Cocoa.h>
+#import <UIKit/UIKit.h>
 
 //! Project version number for LiteMatrix.
 FOUNDATION_EXPORT double LiteMatrixVersionNumber;
